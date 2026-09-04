@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"   # Triggers on tags like v1.0.0, v1.2.3, etc.
+
+permissions:
+  contents: write  # Required to create GitHub Releases and upload assets
+
+jobs:
+  build-and-release:
+    name: Build & Publish Release
+    runs-on: windows-latest
+
+    steps:
+      # ── 1. Checkout source ────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Set up MinGW-w64 toolchain ─────────────────────────────────────
+      - name: Set up MinGW
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+
+      # ── 3. Configure CMake (Release mode, MinGW) ──────────────────────────
+      - name: Configure CMake
+        shell: msys2 {0}
+        run: |
+          cmake -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+            -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
+            -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres
+
+      # ── 4. Build ──────────────────────────────────────────────────────────
+      - name: Build
+        shell: msys2 {0}
+        run: cmake --build build
+
+      # ── 5. Verify binary exists ───────────────────────────────────────────
+      - name: Verify binary
+        shell: pwsh
+        run: |
+          $exe = "build\metronome.exe"
+          if (-not (Test-Path $exe)) { throw "Build artifact not found: $exe" }
+          $size = (Get-Item $exe).Length / 1KB
+          Write-Output "Binary size: $([math]::Round($size, 1)) KB"
+
+      # ── 6. Create a zip archive with binary + README ──────────────────────
+      - name: Package release artifact
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $zipName = "metronome-$tag-windows-x64.zip"
+          Compress-Archive -Path "build\metronome.exe", "README.md" -DestinationPath $zipName
+          Write-Output "ARTIFACT_NAME=$zipName" >> $env:GITHUB_ENV
+
+      # ── 7. Create GitHub Release and upload the zip ───────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Metronome ${{ github.ref_name }}"
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: ${{ env.ARTIFACT_NAME }}
+          body: |
+            ## Metronome ${{ github.ref_name }}
+
+            Ultra-lightweight, zero-dependency Windows 10/11 Metronome.
+
+            ### Download & Run
+            1. Download `metronome-${{ github.ref_name }}-windows-x64.zip` below.
+            2. Extract and run `metronome.exe` — no installation or DLLs required.
+
+            ### Highlights
+            - **~330 KB** single executable with no external runtime dependencies.
+            - **< 3 MB RAM** usage at runtime.
+            - Precise WASAPI audio with zero clock drift.
+            - Embedded default woodblock click sound.
+            - Frameless floating window — drag anywhere to move.
+
+            ### Controls
+            | Action | Control |
+            |:-------|:--------|
+            | Play / Pause | Left-click or `Space` |
+            | Adjust BPM ±1 | Mouse Wheel / Arrow Keys |
+            | Adjust BPM ±5 | `Shift` + Wheel / Arrow Keys |
+            | Tap Tempo | `T` |
+            | Context Menu | Right-click |
+            | Move Window | Left-click drag |
+            | Exit | `Esc` or top-right `×` |
