@@ -13,35 +13,40 @@ jobs:
     name: Build & Publish Release
     runs-on: windows-latest
 
+    defaults:
+      run:
+        shell: msys2 {0}
+
     steps:
       # ── 1. Checkout source ────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. Set up MinGW-w64 toolchain ─────────────────────────────────────
-      - name: Set up MinGW
+      # ── 2. Set up MinGW-w64 toolchain (full toolchain bundle) ────────────
+      #    mingw-w64-x86_64-toolchain includes gcc, g++, binutils (windres),
+      #    ar, ld, objdump, etc. Using the meta-package avoids missing tools.
+      - name: Set up MSYS2 + MinGW-w64 toolchain
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
+          update: false
           install: >-
-            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-ninja
 
-      # ── 3. Configure CMake (Release mode, MinGW) ──────────────────────────
+      # ── 3. Configure CMake ────────────────────────────────────────────────
+      #    Do NOT set CMAKE_RC_COMPILER explicitly — let CMake find `windres`
+      #    automatically from the MinGW64 PATH. The toolchain package installs
+      #    it as `windres.exe` (not cross-prefixed) inside /mingw64/bin/.
       - name: Configure CMake
-        shell: msys2 {0}
         run: |
           cmake -B build \
             -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
-            -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ \
-            -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres
+            -DCMAKE_BUILD_TYPE=Release
 
       # ── 4. Build ──────────────────────────────────────────────────────────
       - name: Build
-        shell: msys2 {0}
         run: cmake --build build
 
       # ── 5. Verify binary exists ───────────────────────────────────────────
@@ -60,7 +65,7 @@ jobs:
           $tag = "${{ github.ref_name }}"
           $zipName = "metronome-$tag-windows-x64.zip"
           Compress-Archive -Path "build\metronome.exe", "README.md" -DestinationPath $zipName
-          Write-Output "ARTIFACT_NAME=$zipName" >> $env:GITHUB_ENV
+          "ARTIFACT_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       # ── 7. Create GitHub Release and upload the zip ───────────────────────
       - name: Create GitHub Release
