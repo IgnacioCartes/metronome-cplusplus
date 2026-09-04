@@ -1,0 +1,64 @@
+#include <windows.h>
+#include "resource.h"
+
+// Default Embedded Click WAV
+IDR_WAV_CLICK WAVE "assets/click.wav"
+
+// Context Menu
+IDR_CONTEXT_MENU MENU
+BEGIN
+    POPUP "Metronome"
+    BEGIN
+        MENUITEM "&Play / Pause\tSpace",        IDM_PLAY_PAUSE
+        MENUITEM SEPARATOR
+        POPUP "&Presets"
+        BEGIN
+            MENUITEM "60 BPM (Largo)",          IDM_BPM_60
+            MENUITEM "90 BPM (Andante)",        IDM_BPM_90
+            MENUITEM "120 BPM (Allegro)",       IDM_BPM_120
+            MENUITEM "140 BPM (Vivace)",        IDM_BPM_140
+            MENUITEM "160 BPM (Presto)",        IDM_BPM_160
+            MENUITEM "180 BPM",                 IDM_BPM_180
+            MENUITEM "200 BPM",                 IDM_BPM_200
+        END
+        MENUITEM "&Set Custom BPM...\tCtrl+B",  IDM_CUSTOM_BPM
+        MENUITEM "&Tap Tempo...\tT",            IDM_TAP_TEMPO
+        MENUITEM SEPARATOR
+        POPUP "&Audio Sample"
+        BEGIN
+            MENUITEM "&Default Click (Embedded)",IDM_SAMPLE_EMBEDDED
+            MENUITEM "&Browse Custom WAV...",   IDM_SAMPLE_CUSTOM
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "&Always on Top",              IDM_ALWAYS_ON_TOP
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\tEsc",                  IDM_EXIT
+    END
+END
+
+// Set BPM Dialog
+IDD_SET_BPM DIALOGEX 0, 0, 160, 68
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Set Metronome Tempo"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Tempo (20 - 300 BPM):", -1, 14, 12, 132, 10
+    EDITTEXT        IDC_EDIT_BPM, 14, 25, 60, 14, ES_NUMBER | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 78, 46, 34, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 116, 46, 34, 14
+END
+
+// Tap Tempo Dialog
+IDD_TAP_TEMPO DIALOGEX 0, 0, 190, 126
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Tap Tempo Tool"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Click TAP or press Space repeatedly:", -1, 12, 8, 166, 10
+    PUSHBUTTON      "TAP TEMPO (Space)", IDC_BTN_TAP, 12, 22, 166, 28
+    CTEXT           "Tempo: -- BPM", IDC_STATIC_TAP_BPM, 12, 56, 166, 14, SS_CENTER
+    CTEXT           "Taps recorded: 0", IDC_STATIC_TAP_COUNT, 12, 72, 166, 12, SS_CENTER
+    PUSHBUTTON      "Reset", IDC_BTN_TAP_RESET, 12, 98, 42, 14
+    DEFPUSHBUTTON   "Apply", IDC_BTN_TAP_APPLY, 96, 98, 40, 14
+    PUSHBUTTON      "Close", IDCANCEL, 140, 98, 38, 14
+END
